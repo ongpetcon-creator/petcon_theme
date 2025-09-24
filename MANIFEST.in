@@ -1,0 +1,7 @@
+include MANIFEST.in
+include README.md
+include license.txt
+recursive-include petcon_theme *.py
+recursive-include petcon_theme/public *
+recursive-exclude * __pycache__
+recursive-exclude * *.pyc

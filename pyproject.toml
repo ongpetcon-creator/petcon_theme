@@ -1,0 +1,14 @@
+[project]
+name = "petcon_theme"
+version = "0.0.1"
+description = "Petcon LMS theme: icons for the LMS workspace"
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.frappe]
+app_name = "petcon_theme"
+app_title = "Petcon Theme"
+app_publisher = "Petcon Oil & Gas Services"
+app_description = "Adds unique icons and minor UI tweaks to the LMS workspace."
+app_email = "info@petconlms.com"
+app_license = "MIT"

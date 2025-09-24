@@ -1,0 +1,40 @@
+:root{ --gap:.45rem; --size:1.05rem; }
+
+/* Only affect the /app/lms workspace */
+.petcon-lms .layout-main-section a[href]{ position:relative; }
+.petcon-lms .layout-main-section a[href]::before{
+  display:inline-block; width:var(--size); height:var(--size);
+  margin-right:var(--gap); transform:translateY(1px);
+}
+
+/* --- Get Started row --- */
+.petcon-lms a[href^="/lms"]::before                 { content:"🌐"; } /* Visit LMS Portal */
+.petcon-lms a[href*="/app/course"]::before          { content:"📚"; } /* Course / Create a Course */
+.petcon-lms a[href*="/app/lms-settings"]::before    { content:"⚙️"; } /* LMS Settings */
+
+/* --- Statistics --- */
+.petcon-lms a[href*="/app/employee"]::before        { content:"👤"; }
+.petcon-lms a[href*="/app/enrollment"]::before      { content:"📝"; }
+.petcon-lms a[href*="/app/vehicle"]::before         { content:"🚚"; }
+.petcon-lms a[href*="/app/department"]::before      { content:"🏢"; }
+.petcon-lms a[href*="/app/certificate"]::before     { content:"🎓"; }
+
+/* --- Master → Course Data --- */
+.petcon-lms a[href*="/app/chapter"]::before         { content:"📖"; }
+.petcon-lms a[href*="/app/lesson"]::before          { content:"🧠"; }
+.petcon-lms a[href*="/app/quiz"]::before            { content:"❓"; }
+.petcon-lms a[href*="/app/quiz-submission"]::before { content:"📤"; }
+
+/* --- Master → Custom Documents --- */
+.petcon-lms a[href*="/app/driver"]::before          { content:"🪪"; }
+.petcon-lms a[href*="/app/external-course"]::before { content:"🔗"; }
+.petcon-lms a[href*="/app/site"]::before            { content:"📍"; }
+.petcon-lms a[href*="/app/training"]::before        { content:"🏋️"; }
+
+/* --- Course Stats --- */
+.petcon-lms a[href*="/app/review"]::before          { content:"⭐"; }
+
+/* --- Certification --- */
+.petcon-lms a[href*="/app/certification"]::before   { content:"📜"; }
+.petcon-lms a[href*="/app/evaluation-request"]::before { content:"📩"; }
+.petcon-lms a[href*="/app/evaluation"]::before      { content:"🧪"; }
