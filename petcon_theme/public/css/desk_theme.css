@@ -1,62 +1,27 @@
-/* Petcon LMS: emoji icons for the LMS workspace tiles/links.
-   Scoped behind .petcon-lms to avoid touching other workspaces.  */
+/* Petcon Theme — Emoji icons for LMS
+   JS injects <span class="petcon-emoji">🙂</span> before labels.
+   This file styles those spans and disables any ::before bullets. */
 
 :root {
   --petcon-icon-gap: .45rem;
   --petcon-icon-size: 1.05rem;
 }
 
-.petcon-lms .page-content a[href] {
-  position: relative;
-}
-
-.petcon-lms .page-content a[href]::before {
+/* emoji + text alignment */
+html.petcon-lms .petcon-emoji {
   display: inline-block;
   width: var(--petcon-icon-size);
   height: var(--petcon-icon-size);
+  line-height: var(--petcon-icon-size);
   margin-right: var(--petcon-icon-gap);
   transform: translateY(1px);
-  /* Default placeholder (mostly invisible). Specific rules below override content. */
-  content: "";
 }
 
-/* --------------------------
-   Get Started
---------------------------- */
-.petcon-lms .page-content a[href^="/lms"]::before { content: "🌐"; }            /* Visit LMS Portal */
-.petcon-lms .page-content a[href*="/app/course"]::before { content: "📚"; }     /* Create a Course / Course */
-.petcon-lms .page-content a[href*="/app/lms-settings"]::before { content: "⚙️"; } /* LMS Settings */
-
-/* --------------------------
-   Statistics
---------------------------- */
-.petcon-lms .page-content a[href*="/app/employee"]::before { content: "👤"; }
-.petcon-lms .page-content a[href*="/app/enrollment"]::before { content: "📝"; }
-.petcon-lms .page-content a[href*="/app/vehicle"]::before { content: "🚚"; }
-.petcon-lms .page-content a[href*="/app/department"]::before { content: "🏢"; }
-.petcon-lms .page-content a[href*="/app/certificate"]::before { content: "🎓"; }
-
-/* --------------------------
-   Master → Course Data
---------------------------- */
-.petcon-lms .page-content a[href*="/app/chapter"]::before { content: "📖"; }
-.petcon-lms .page-content a[href*="/app/lesson"]::before { content: "🧠"; }
-.petcon-lms .page-content a[href*="/app/quiz-submission"]::before { content: "📤"; }
-.petcon-lms .page-content a[href*="/app/quiz"]::before { content: "❓"; }
-
-/* --------------------------
-   Custom Documents
---------------------------- */
-.petcon-lms .page-content a[href*="/app/driver"]::before { content: "🪪"; }
-.petcon-lms .page-content a[href*="/app/external-course"]::before { content: "🔗"; }
-.petcon-lms .page-content a[href*="/app/site"]::before { content: "📍"; }
-.petcon-lms .page-content a[href*="/app/training"]::before { content: "🏋️"; }
-.petcon-lms .page-content a[href*="/app/vehicle"]::before { content: "🚚"; } /* (dup ok) */
-
-/* --------------------------
-   Course Stats & Certification
---------------------------- */
-.petcon-lms .page-content a[href*="/app/review"]::before { content: "⭐"; }
-.petcon-lms .page-content a[href*="/app/certification"]::before { content: "📜"; }
-.petcon-lms .page-content a[href*="/app/evaluation-request"]::before { content: "📩"; }
-.petcon-lms .page-content a[href*="/app/evaluation"]::before { content: "🧪"; }
+/* prevent leftover bullets from older CSS (LMS scope only) */
+html.petcon-lms .standard-sidebar-item a::before,
+html.petcon-lms .module-section a.module-link::before,
+html.petcon-lms .links-widget a.link-item::before,
+html.petcon-lms .section-body a::before,
+html.petcon-lms .page-content a[href]::before {
+  content: none !important;
+}
