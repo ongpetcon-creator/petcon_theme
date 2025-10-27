@@ -1,27 +1,62 @@
-/* Petcon Theme — Emoji icons for LMS
-   JS injects <span class="petcon-emoji">🙂</span> before labels.
-   This file styles those spans and disables any ::before bullets. */
-
+/* ===== Petcon LMS tiles (light-blue border + orbiting dot) ===== */
 :root {
-  --petcon-icon-gap: .45rem;
-  --petcon-icon-size: 1.05rem;
+  --petcon-tile-border: #8ec8ff;
+  --petcon-tile-shadow: 0 8px 24px rgba(0,0,0,.04);
+  --petcon-tile-radius: 16px;
+  --petcon-tile-pad: 14px;
+  --petcon-orbit-size: 10px;
+  --petcon-orbit-color: #4aa3ff;
+  --petcon-orbit-glow: 0 0 12px rgba(74,163,255,.7);
 }
 
-/* emoji + text alignment */
-html.petcon-lms .petcon-emoji {
-  display: inline-block;
-  width: var(--petcon-icon-size);
-  height: var(--petcon-icon-size);
-  line-height: var(--petcon-icon-size);
-  margin-right: var(--petcon-icon-gap);
-  transform: translateY(1px);
+html.petcon-lms .petcon-tile {
+  position: relative;
+  border: 2px solid var(--petcon-tile-border);
+  border-radius: var(--petcon-tile-radius);
+  padding: var(--petcon-tile-pad);
+  box-shadow: var(--petcon-tile-shadow);
+  background: #fff;
+  overflow: visible; /* let the orb sit on the edge */
 }
 
-/* prevent leftover bullets from older CSS (LMS scope only) */
-html.petcon-lms .standard-sidebar-item a::before,
-html.petcon-lms .module-section a.module-link::before,
-html.petcon-lms .links-widget a.link-item::before,
-html.petcon-lms .section-body a::before,
-html.petcon-lms .page-content a[href]::before {
-  content: none !important;
+html.petcon-lms .petcon-tile .section-head,
+html.petcon-lms .petcon-tile .section-title {
+  margin-top: 2px;
 }
+
+/* orbiting dot */
+html.petcon-lms .petcon-tile::after {
+  content: "";
+  position: absolute;
+  width: var(--petcon-orbit-size);
+  height: var(--petcon-orbit-size);
+  border-radius: 50%;
+  background: var(--petcon-orbit-color);
+  box-shadow: var(--petcon-orbit-glow);
+
+  /* start at top-left edge */
+  top: calc(-0.5 * var(--petcon-orbit-size));
+  left: calc(var(--petcon-tile-pad) - 3px);
+
+  /* speed: change 6s → 10s for calmer, 3s for faster */
+  animation: petcon-rect-orbit 6s linear infinite;
+}
+
+@keyframes petcon-rect-orbit {
+  /* top-left → top-right */
+  0%   { top: calc(-0.5 * var(--petcon-orbit-size)); left: calc(var(--petcon-tile-pad) - 3px); }
+  24%  { top: calc(-0.5 * var(--petcon-orbit-size)); left: calc(100% - var(--petcon-tile-pad) - 3px); }
+
+  /* top-right → bottom-right */
+  26%  { top: calc(-0.5 * var(--petcon-orbit-size)); left: calc(100% - var(--petcon-tile-pad) - 3px); }
+  49%  { top: calc(100% - var(--petcon-orbit-size) / 2); left: calc(100% - var(--petcon-tile-pad) - 3px); }
+
+  /* bottom-right → bottom-left */
+  51%  { top: calc(100% - var(--petcon-orbit-size) / 2); left: calc(100% - var(--petcon-tile-pad) - 3px); }
+  74%  { top: calc(100% - var(--petcon-orbit-size) / 2); left: calc(var(--petcon-tile-pad) - 3px); }
+
+  /* bottom-left → top-left */
+  76%  { top: calc(100% - var(--petcon-orbit-size) / 2); left: calc(var(--petcon-tile-pad) - 3px); }
+  100% { top: calc(-0.5 * var(--petcon-orbit-size)); left: calc(var(--petcon-tile-pad) - 3px); }
+}
+/* ===== End Petcon LMS tiles ===== */
