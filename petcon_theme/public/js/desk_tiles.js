@@ -1,54 +1,104 @@
-// Petcon Theme — LMS tiles (adds classes to card sections on /app/lms)
+// Petcon Theme — LMS tiles (v3.1: aggressive heading→widget tagging + retries)
 (() => {
   const onLMS = () => location.pathname.startsWith("/app/lms");
 
-  function tagTiles(root = document) {
-    if (!onLMS()) return;
+  // Titles to box as tiles
+  const TILE_TITLES = new Set([
+    "get started",
+    "statistics",
+    "master",
+    "custom documents",
+  ]);
 
-    // Find all visible card-like sections in the LMS workspace
-    const sections = root.querySelectorAll(
-      // Workspace card/group containers (Frappe 15)
-      ".workspace .widget-group, .workspace .dashboard-section, .workspace .cards"
+  const norm = (t) => (t || "").trim().toLowerCase().replace(/\s+/g, " ");
+
+  // Nearest “card-like” container Frappe uses on Workspaces
+  function closestTileContainer(el) {
+    return (
+      el.closest(
+        [
+          ".widget.shortcuts",        // shortcuts widget
+          ".widget.links-widget",     // alt shortcuts
+          ".widget",                  // generic widget
+          ".widget-group",            // group wrapper
+          ".dashboard-section",       // alt group wrapper
+          ".cards",                   // legacy/alt
+          ".frappe-card",             // card wrapper
+          ".layout-main-section",     // last resort
+        ].join(",")
+      ) || el.parentElement
+    );
+  }
+
+  // Try to find headings and tag their containers
+  function tagTiles(root = document) {
+    if (!onLMS()) return 0;
+
+    const headingNodes = root.querySelectorAll(
+      [
+        ".section-head .section-title",
+        ".section-title",
+        ".widget-head .widget-title",
+        ".links-widget .widget-title",
+        ".shortcut-widget-box .widget-title",
+        "h2","h3","h4","h5"
+      ].join(",")
     );
 
-    sections.forEach((sec) => {
-      // Try to read the section's title text
-      const titleEl =
-        sec.querySelector(".section-head .section-title") ||
-        sec.querySelector(".section-title") ||
-        sec.querySelector("h5, h4");
-      const title = (titleEl?.textContent || "").trim().toLowerCase();
+    let tagged = 0;
 
-      if (!title) return;
+    headingNodes.forEach((h) => {
+      const title = norm(h.textContent);
+      if (!TILE_TITLES.has(title)) return;
 
-      // Mark only the 4 tiles we care about
-      if (["get started", "statistics", "master", "custom documents"].includes(title)) {
-        sec.classList.add("petcon-tile");
-        sec.dataset.petconTile = title.replace(/\s+/g, "-");
-      }
+      const box = closestTileContainer(h);
+      if (!box || box.classList.contains("petcon-tile")) return;
+
+      box.classList.add("petcon-tile");
+      box.dataset.petconTile = title.replace(/\s+/g, "-");
+      tagged++;
     });
+
+    return tagged;
   }
 
-  function run() {
+  function runWithRetries() {
+    // set page flag for CSS scoping
     document.documentElement.classList.toggle("petcon-lms", onLMS());
-    tagTiles(document);
+
+    // immediate attempt
+    let tagged = tagTiles(document);
+
+    // a few timed retries (workspace paints async)
+    let tries = 0;
+    const maxTries = 8; // ~800ms
+    const interval = setInterval(() => {
+      tries++;
+      tagged += tagTiles(document) || 0;
+      if (tries >= maxTries || tagged >= 4) clearInterval(interval);
+    }, 100);
+
+    // also try again on next frame after layout
+    requestAnimationFrame(() => tagTiles(document));
   }
 
-  // Initial + SPA route changes
+  // bootstrap
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", run, { once: true });
+    document.addEventListener("DOMContentLoaded", runWithRetries, { once: true });
   } else {
-    run();
+    runWithRetries();
   }
-  window.addEventListener("popstate", run);
-  window.addEventListener("hashchange", run);
-  document.addEventListener("page-change", run);
-  try { if (window.frappe?.router?.on) frappe.router.on("change", run); } catch {}
 
-  // Re-apply when the workspace re-renders
+  // SPA route changes
+  window.addEventListener("popstate", runWithRetries);
+  window.addEventListener("hashchange", runWithRetries);
+  document.addEventListener("page-change", runWithRetries);
+  try { if (window.frappe?.router?.on) frappe.router.on("change", runWithRetries); } catch {}
+
+  // Re-apply on dynamic re-renders
   try {
     const mo = new MutationObserver((m) => {
-      if (m.some(x => x.addedNodes && x.addedNodes.length)) tagTiles(document);
+      if (m.some(x => x.addedNodes && x.addedNodes.length)) runWithRetries();
     });
     mo.observe(document.body, { childList: true, subtree: true });
   } catch {}
