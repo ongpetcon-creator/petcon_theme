@@ -1,4 +1,4 @@
-/* ===== Petcon LMS tiles (light-blue border + orbiting dot) ===== */
+/* ===== Petcon LMS tiles (light-blue border + smooth orbiting dot) ===== */
 :root {
   --petcon-tile-border: #8ec8ff;
   --petcon-tile-shadow: 0 8px 24px rgba(0,0,0,.04);
@@ -16,15 +16,10 @@ html.petcon-lms .petcon-tile {
   padding: var(--petcon-tile-pad);
   box-shadow: var(--petcon-tile-shadow);
   background: #fff;
-  overflow: visible; /* let the orb sit on the edge */
+  overflow: visible;
 }
 
-html.petcon-lms .petcon-tile .section-head,
-html.petcon-lms .petcon-tile .section-title {
-  margin-top: 2px;
-}
-
-/* orbiting dot */
+/* smoother dot + subtle blur for niceness */
 html.petcon-lms .petcon-tile::after {
   content: "";
   position: absolute;
@@ -33,30 +28,29 @@ html.petcon-lms .petcon-tile::after {
   border-radius: 50%;
   background: var(--petcon-orbit-color);
   box-shadow: var(--petcon-orbit-glow);
-
-  /* start at top-left edge */
+  filter: saturate(1.1);
+  /* start near top-left */
   top: calc(-0.5 * var(--petcon-orbit-size));
   left: calc(var(--petcon-tile-pad) - 3px);
-
-  /* speed: change 6s → 10s for calmer, 3s for faster */
-  animation: petcon-rect-orbit 6s linear infinite;
+  animation: petcon-rect-orbit 10s linear infinite; /* slower & smoother */
 }
 
+/* add more keyframes near corners to reduce jerk */
 @keyframes petcon-rect-orbit {
   /* top-left → top-right */
   0%   { top: calc(-0.5 * var(--petcon-orbit-size)); left: calc(var(--petcon-tile-pad) - 3px); }
-  24%  { top: calc(-0.5 * var(--petcon-orbit-size)); left: calc(100% - var(--petcon-tile-pad) - 3px); }
+  20%  { top: calc(-0.5 * var(--petcon-orbit-size)); left: 50%; }
+  25%  { top: calc(-0.5 * var(--petcon-orbit-size)); left: calc(100% - var(--petcon-tile-pad) - 3px); }
 
   /* top-right → bottom-right */
-  26%  { top: calc(-0.5 * var(--petcon-orbit-size)); left: calc(100% - var(--petcon-tile-pad) - 3px); }
-  49%  { top: calc(100% - var(--petcon-orbit-size) / 2); left: calc(100% - var(--petcon-tile-pad) - 3px); }
+  30%  { top: 25%; left: calc(100% - var(--petcon-tile-pad) - 3px); }
+  50%  { top: calc(100% - var(--petcon-orbit-size) / 2); left: calc(100% - var(--petcon-tile-pad) - 3px); }
 
   /* bottom-right → bottom-left */
-  51%  { top: calc(100% - var(--petcon-orbit-size) / 2); left: calc(100% - var(--petcon-tile-pad) - 3px); }
-  74%  { top: calc(100% - var(--petcon-orbit-size) / 2); left: calc(var(--petcon-tile-pad) - 3px); }
+  55%  { top: calc(100% - var(--petcon-orbit-size) / 2); left: 50%; }
+  70%  { top: calc(100% - var(--petcon-orbit-size) / 2); left: calc(var(--petcon-tile-pad) - 3px); }
 
   /* bottom-left → top-left */
-  76%  { top: calc(100% - var(--petcon-orbit-size) / 2); left: calc(var(--petcon-tile-pad) - 3px); }
+  80%  { top: 25%; left: calc(var(--petcon-tile-pad) - 3px); }
   100% { top: calc(-0.5 * var(--petcon-orbit-size)); left: calc(var(--petcon-tile-pad) - 3px); }
 }
-/* ===== End Petcon LMS tiles ===== */

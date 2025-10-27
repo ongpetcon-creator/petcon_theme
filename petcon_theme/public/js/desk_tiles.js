@@ -1,59 +1,60 @@
-// Petcon Theme — LMS tiles (v3.1: aggressive heading→widget tagging + retries)
+// Petcon Theme — LMS tiles (v3.2: strong heading→container tagging + retries + fallbacks)
 (() => {
   const onLMS = () => location.pathname.startsWith("/app/lms");
 
-  // Titles to box as tiles
-  const TILE_TITLES = new Set([
-    "get started",
-    "statistics",
-    "master",
-    "custom documents",
-  ]);
+  // Titles to box
+  const TITLES = ["get started", "statistics", "master", "custom documents"];
+  const TITLE_SET = new Set(TITLES);
 
   const norm = (t) => (t || "").trim().toLowerCase().replace(/\s+/g, " ");
 
-  // Nearest “card-like” container Frappe uses on Workspaces
+  // Robust parent picker for your workspace DOM
   function closestTileContainer(el) {
-    return (
+    // Try common widget/card wrappers first
+    let box =
       el.closest(
         [
-          ".widget.shortcuts",        // shortcuts widget
-          ".widget.links-widget",     // alt shortcuts
-          ".widget",                  // generic widget
-          ".widget-group",            // group wrapper
-          ".dashboard-section",       // alt group wrapper
-          ".cards",                   // legacy/alt
-          ".frappe-card",             // card wrapper
-          ".layout-main-section",     // last resort
+          ".widget.shortcuts",
+          ".widget.links-widget",
+          ".widget",
+          ".widget-group",
+          ".dashboard-section",
+          ".cards",
+          ".frappe-card",
         ].join(",")
-      ) || el.parentElement
-    );
+      ) || null;
+
+    // If still nothing, try walking up to a section wrapper
+    if (!box) {
+      let p = el;
+      for (let i = 0; i < 6 && p && p !== document.body; i++) {
+        if (
+          p.classList?.contains("layout-main-section") ||
+          p.classList?.contains("section-body") ||
+          p.classList?.contains("page-content")
+        ) {
+          box = p;
+          break;
+        }
+        p = p.parentElement;
+      }
+    }
+
+    return box || el.parentElement;
   }
 
-  // Try to find headings and tag their containers
-  function tagTiles(root = document) {
-    if (!onLMS()) return 0;
-
+  function tagByHeadings(root = document) {
+    // Any visible heading-like element
     const headingNodes = root.querySelectorAll(
-      [
-        ".section-head .section-title",
-        ".section-title",
-        ".widget-head .widget-title",
-        ".links-widget .widget-title",
-        ".shortcut-widget-box .widget-title",
-        "h2","h3","h4","h5"
-      ].join(",")
+      ".section-head .section-title, .section-title, .widget-head .widget-title, h2, h3, h4, h5"
     );
-
     let tagged = 0;
 
     headingNodes.forEach((h) => {
       const title = norm(h.textContent);
-      if (!TILE_TITLES.has(title)) return;
-
+      if (!TITLE_SET.has(title)) return;
       const box = closestTileContainer(h);
       if (!box || box.classList.contains("petcon-tile")) return;
-
       box.classList.add("petcon-tile");
       box.dataset.petconTile = title.replace(/\s+/g, "-");
       tagged++;
@@ -62,24 +63,65 @@
     return tagged;
   }
 
+  // Fallback: if some tiles still untagged, tag sections by content clusters
+  function tagByContentHeuristics() {
+    // Get Started → has portal/create/settings links
+    try {
+      const cands = [
+        ["visit lms portal", "create a course", "lms settings", "get-started"],
+        ["employees", "enrollments", "course completed", "statistics"],
+        ["course", "chapter", "lesson", "master"],
+        ["department", "driver", "employee", "custom-documents"],
+      ];
+      cands.forEach(([a, b, c, key]) => {
+        const an = findAnchorByText(a) || findAnchorByText(b) || findAnchorByText(c);
+        if (!an) return;
+        const box = closestTileContainer(an);
+        if (box && !box.classList.contains("petcon-tile")) {
+          box.classList.add("petcon-tile");
+          box.dataset.petconTile = key;
+        }
+      });
+    } catch {}
+  }
+
+  function findAnchorByText(text) {
+    const t = norm(text);
+    const links = document.querySelectorAll("a[href], .shortcut, .link-item");
+    for (const el of links) {
+      const label =
+        norm(
+          el.querySelector(".module-link-title, .link-content, .shortcut-title, .widget-title")
+            ?.textContent || el.textContent
+        );
+      if (!label) continue;
+      if (label.includes(t)) return el;
+    }
+    return null;
+  }
+
   function runWithRetries() {
-    // set page flag for CSS scoping
-    document.documentElement.classList.toggle("petcon-lms", onLMS());
+    if (!onLMS()) return;
+    document.documentElement.classList.add("petcon-lms");
 
-    // immediate attempt
-    let tagged = tagTiles(document);
+    let passes = 0;
+    let taggedTotal = 0;
 
-    // a few timed retries (workspace paints async)
-    let tries = 0;
-    const maxTries = 8; // ~800ms
-    const interval = setInterval(() => {
-      tries++;
-      tagged += tagTiles(document) || 0;
-      if (tries >= maxTries || tagged >= 4) clearInterval(interval);
-    }, 100);
+    const tick = () => {
+      passes++;
+      taggedTotal += tagByHeadings(document) || 0;
 
-    // also try again on next frame after layout
-    requestAnimationFrame(() => tagTiles(document));
+      // After a couple of passes, apply heuristic tagging if any are still missing
+      if (passes === 2) tagByContentHeuristics();
+
+      // Stop after enough passes or once we’ve tagged all four tiles
+      if (passes >= 8 || document.querySelectorAll(".petcon-tile").length >= 4) return;
+
+      setTimeout(tick, 100);
+    };
+
+    // immediate + retries
+    tick();
   }
 
   // bootstrap
@@ -89,13 +131,12 @@
     runWithRetries();
   }
 
-  // SPA route changes
-  window.addEventListener("popstate", runWithRetries);
-  window.addEventListener("hashchange", runWithRetries);
+  // SPA hooks
+  ["popstate", "hashchange"].forEach((ev) => window.addEventListener(ev, runWithRetries));
   document.addEventListener("page-change", runWithRetries);
   try { if (window.frappe?.router?.on) frappe.router.on("change", runWithRetries); } catch {}
 
-  // Re-apply on dynamic re-renders
+  // dynamic re-renders
   try {
     const mo = new MutationObserver((m) => {
       if (m.some(x => x.addedNodes && x.addedNodes.length)) runWithRetries();
