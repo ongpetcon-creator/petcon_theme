@@ -1,10 +1,13 @@
-/* Petcon Theme — LMS emoji icons & route flag
+/* Petcon Theme — LMS emoji icons & route flag (unique icons)
  * - Adds html.petcon-lms on /app/lms so CSS can scope cleanly
- * - Injects emojis next to link labels across the LMS module page & widgets
- * - Robust to SPA route changes; avoids duplicates
+ * - Injects unique emojis next to link labels across the LMS module page & widgets
+ * - Robust to SPA route changes & re-renders; avoids duplicates
  */
+
 (() => {
   const FLAG = "petcon-lms";
+
+  // Where to look for anchor links on the workspace/module page
   const SELECTORS = [
     // module page sections & workspace cards
     ".module-page .module-body .module-section a",
@@ -18,11 +21,11 @@
     ".page-content a[href]"
   ].join(",");
 
-  // ROUTE FLAG
+  // Route helpers
   const onLMS = () => location.pathname.startsWith("/app/lms");
   const mark = () => document.documentElement.classList.toggle(FLAG, onLMS());
 
-  // === Exact label → emoji map (lowercased keys) ===
+  // === Exact label → emoji map (all UNIQUE) ===
   const LABEL_EMOJI = {
     // Shortcuts / header
     "visit lms portal": "🌐",
@@ -30,11 +33,20 @@
     "lms settings": "⚙️",
 
     // Course data
-    "course": "📚",
-    "chapter": "📖",
-    "lesson": "🧠",
+    "course": "📘",
+    "chapter": "🧩",
+    "lesson": "▶️",
     "quiz": "❓",
     "quiz submission": "📤",
+
+    // Stats & certification
+    "review": "⭐",
+    "certification": "🏅",
+    "certificate": "🎓",
+    "evaluation request": "📨",
+    "evaluation": "🔬",
+    "course completed": "✅",
+    "enrollments": "📝",
 
     // Custom documents
     "department": "🏢",
@@ -44,72 +56,40 @@
     "external course": "🔗",
     "site": "📍",
     "training": "🏋️",
-    "vehicle": "🚚",
-
-    // Stats & certification
-    "review": "⭐",
-    "certification": "📜",
-    "certificate": "🎓",
-    "evaluation request": "📩",
-    "evaluation": "🧪",
-    "course completed": "✅",
-    "enrollments": "📝"
+    "vehicle": "🚚"
   };
 
-  // === HREF substring → emoji map (checked before keyword guesses) ===
+  // === HREF substring → emoji map (mirror above; also UNIQUE) ===
   const HREF_EMOJI = [
-    ["^/lms", "🌐"],                 // portal
+    ["^/lms", "🌐"],
     ["/app/lms-settings", "⚙️"],
-    ["/app/course", "📚"],
-    ["/app/chapter", "📖"],
-    ["/app/lesson", "🧠"],
+    ["/app/course", "📘"],
+    ["/app/chapter", "🧩"],
+    ["/app/lesson", "▶️"],
     ["/app/quiz-submission", "📤"],
     ["/app/quiz", "❓"],
-    ["/app/employee", "👤"],
-    ["/app/enrollment", "📝"],
-    ["/app/vehicle", "🚚"],
-    ["/app/department", "🏢"],
+    ["/app/review", "⭐"],
+    ["/app/certification", "🏅"],
     ["/app/certificate", "🎓"],
+    ["/app/evaluation-request", "📨"],
+    ["/app/evaluation", "🔬"],
+    ["/app/enrollment", "📝"],
+    ["/app/employee", "👤"],
+    ["/app/department", "🏢"],
+    ["/app/vehicle", "🚚"],
     ["/app/driver", "🪪"],
     ["/app/external-course", "🔗"],
     ["/app/site", "📍"],
-    ["/app/training", "🏋️"],
-    ["/app/review", "⭐"],
-    ["/app/certification", "📜"],
-    ["/app/evaluation-request", "📩"],
-    ["/app/evaluation", "🧪"]
+    ["/app/training", "🏋️"]
   ];
 
-  // Keyword fallback — ensures every link still gets *something*
-  function guessEmoji(label) {
-    const t = label.toLowerCase();
-    if (t.includes("create")) return "➕";
-    if (t.includes("portal")) return "🌐";
-    if (t.includes("setting")) return "⚙️";
-    if (t.includes("course completed")) return "✅";
-    if (t.includes("course")) return "📚";
-    if (t.includes("chapter")) return "📖";
-    if (t.includes("lesson")) return "🧠";
-    if (t.includes("quiz submission")) return "📤";
-    if (t.includes("quiz")) return "❓";
-    if (t.includes("employee")) return "👥";
-    if (t.includes("enroll")) return "📝";
-    if (t.includes("department")) return "🏢";
-    if (t.includes("certificate")) return "🎓";
-    if (t.includes("review")) return "⭐";
-    if (t.includes("certif")) return "📜";
-    if (t.includes("evaluation request")) return "📩";
-    if (t.includes("evaluation")) return "🧪";
-    if (t.includes("vehicle")) return "🚚";
-    if (t.includes("driver")) return "🪪";
-    if (t.includes("train")) return "🏋️";
-    if (t.includes("site")) return "📍";
-    if (t.includes("external")) return "🔗";
-    return "🔹"; // neutral fallback
-  }
+  // Pool to keep unknowns unique & unobtrusive
+  const FALLBACK_POOL = ["🔹","🔸","🔺","🔻","🔷","🔶","⬛","⬜","🔳","🔲","🟦","🟧","🟩","🟨","🟪","🟫"];
+  const USED_EMOJIS = new Set();
 
+  // Helpers
   function findLabelNode(a) {
-    // common patterns in Frappe workspaces
+    // common label containers in Frappe workspaces
     return (
       a.querySelector(".module-link-title") ||
       a.querySelector(".link-content") ||
@@ -135,12 +115,26 @@
     return exact || guessEmoji(label);
   }
 
+  function guessEmoji(_label) {
+    // Minimalist: choose the first unused neutral shape
+    return FALLBACK_POOL.find(e => !USED_EMOJIS.has(e)) || "🔹";
+  }
+
   function addEmoji(anchor) {
     if (!anchor || anchor.dataset.pcEmoji) return;
-    const emoji = emojiFor(anchor);
+
+    let emoji = emojiFor(anchor);
     if (!emoji) return;
 
+    // ensure uniqueness across different labels
     const labelNode = findLabelNode(anchor);
+    const label = textOf(labelNode).toLowerCase();
+    if (USED_EMOJIS.has(emoji) && LABEL_EMOJI[label] !== emoji) {
+      // pick first unused
+      emoji = FALLBACK_POOL.find(e => !USED_EMOJIS.has(e)) || emoji;
+    }
+    USED_EMOJIS.add(emoji);
+
     const span = document.createElement("span");
     span.className = "petcon-emoji";
     span.textContent = emoji;
