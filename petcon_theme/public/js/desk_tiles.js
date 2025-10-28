@@ -1,85 +1,109 @@
-// Petcon Theme — LMS tiles (v4.2: wrap full sections robustly)
+// Petcon Theme — LMS tiles (v4.3: wrap exactly 4 sections, no stray top tiles)
 (() => {
   const onLMS = () => location.pathname.startsWith("/app/lms");
 
-  // Section titles to enclose
   const TITLES = ["get started", "statistics", "master", "custom documents"];
   const TITLE_SET = new Set(TITLES);
   const norm = (t) => (t || "").trim().toLowerCase().replace(/\s+/g, " ");
 
-  function findTitleNodes(root = document) {
-    const candidates = root.querySelectorAll(
-      ".section-head .section-title, .section-title, .widget-title, .widget-head, h1, h2, h3, h4, h5, h6, .ellipsis, .head"
-    );
-    const hits = [];
-    candidates.forEach((el) => {
-      if (TITLE_SET.has(norm(el.textContent))) hits.push(el);
+  // Remove any existing wrappers so we can re-evaluate cleanly
+  function cleanupTiles() {
+    document.querySelectorAll(".petcon-tile").forEach((tile) => {
+      const parent = tile.parentNode;
+      while (tile.firstChild) parent.insertBefore(tile.firstChild, tile);
+      parent.removeChild(tile);
     });
-    hits.sort((a, b) =>
+  }
+
+  // Find target headings (DOM order)
+  function getHeadings(root = document) {
+    const nodes = [...root.querySelectorAll(
+      ".section-head .section-title, .section-title, h2, h3, h4, h5"
+    )].filter((el) => TITLE_SET.has(norm(el.textContent)));
+    nodes.sort((a,b) =>
       (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1
     );
-    return hits;
+    return nodes;
   }
 
-  function rowChildUnderMainSection(node) {
-    let n = node;
-    while (n && n.parentElement && !n.parentElement.classList.contains("layout-main-section")) {
-      n = n.parentElement;
-    }
-    if (!n || !n.parentElement || !n.parentElement.classList.contains("layout-main-section")) {
-      return null;
-    }
-    return n;
-  }
+  // Wrap from heading → (but not including) nextHeading
+  function wrapFromHeading(heading, nextHeading) {
+    // already wrapped?
+    if (heading.closest(".petcon-tile")) return false;
 
-  function wrapRange(startNode, endNode, titleText) {
-    if (!startNode) return false;
-    if (startNode.closest(".petcon-tile")) return false;
-    const parent = startNode.parentElement;
+    const parent = heading.parentNode;
     if (!parent) return false;
 
     const wrapper = document.createElement("div");
     wrapper.className = "petcon-tile";
-    wrapper.dataset.petconTile = norm(titleText).replace(/\s+/g, "-");
-    parent.insertBefore(wrapper, startNode);
+    wrapper.dataset.petconTile = norm(heading.textContent).replace(/\s+/g, "-");
+    parent.insertBefore(wrapper, heading);
 
-    let cur = startNode;
-    while (cur && cur !== endNode) {
+    // Move siblings starting at the heading until we reach nextHeading
+    let cur = heading;
+    while (cur && cur !== nextHeading) {
+      // If cur and nextHeading are in different parents, we stop when no nextSibling
+      // (in Frappe workspace, headings of sections are typically siblings).
       const next = cur.nextSibling;
       wrapper.appendChild(cur);
       cur = next;
+      if (!cur && nextHeading && nextHeading.parentNode !== parent) break;
+    }
+
+    // If wrapper ended up too empty (just the heading and nothing else), undo
+    const hasContent = wrapper.querySelectorAll("a, .module-section, .links-widget, .stats, .row, .col").length > 0;
+    if (!hasContent) {
+      // unwrap
+      while (wrapper.firstChild) parent.insertBefore(wrapper.firstChild, wrapper);
+      parent.removeChild(wrapper);
+      return false;
     }
     return true;
   }
 
   function wrapSections() {
     if (!onLMS()) return 0;
-    const titles = findTitleNodes(document);
-    if (!titles.length) return 0;
 
-    const starts = titles.map((el) => ({
-      title: el.textContent,
-      block: rowChildUnderMainSection(el) || el,
-    }));
+    cleanupTiles(); // ensure we start fresh
+
+    const heads = getHeadings(document);
+    if (!heads.length) return 0;
 
     let wrapped = 0;
-    for (let i = 0; i < starts.length; i++) {
-      const start = starts[i].block;
-      const end   = (i + 1 < starts.length) ? starts[i + 1].block : null;
-      if (wrapRange(start, end, starts[i].title)) wrapped++;
+    for (let i = 0; i < heads.length; i++) {
+      const h = heads[i];
+      const next = heads[i + 1] || null;
+      if (wrapFromHeading(h, next)) wrapped++;
     }
-    return wrapped;
+
+    // If more than 4 somehow, keep only our 4 section keys
+    const tiles = [...document.querySelectorAll(".petcon-tile")];
+    tiles.forEach((t) => {
+      const key = t.dataset.petconTile;
+      if (!TITLE_SET.has(key.replace(/-/g, " "))) {
+        const p = t.parentNode;
+        while (t.firstChild) p.insertBefore(t.firstChild, t);
+        p.removeChild(t);
+      }
+    });
+
+    return document.querySelectorAll(".petcon-tile").length;
   }
 
   function runWithRetries() {
     if (!onLMS()) return;
     document.documentElement.classList.add("petcon-lms");
-    let tries = 0, max = 8;
+
+    let tries = 0;
+    const maxTries = 8;
+
     const tick = () => {
-      tries++; wrapSections();
-      if (document.querySelectorAll(".petcon-tile").length >= 4 || tries >= max) return;
+      tries++;
+      const count = wrapSections();
+      if (count >= 4 || tries >= maxTries) return;
       setTimeout(tick, 120);
     };
+
     tick();
   }
 
